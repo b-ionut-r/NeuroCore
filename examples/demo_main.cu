@@ -162,7 +162,7 @@ int main() {
             Tensor<float> w = tensor::ones<float>({2, 2}, true);
             w.grad() = 0.1f;
 
-            vector<tensor::TensorPtrVariant> params = {w.get()};
+            vector<tensor::TensorVariant> params = {w};
 
             // Strategy Pattern - diferiti optimizeri
             SGD sgd(params, 0.01f, 0.0f, 0.9f);
@@ -190,7 +190,7 @@ int main() {
             cout << "\nVirtual destructor test:\n";
             Tensor<float> tmp = tensor::ones<float>({1}, true);
             tmp.grad() = 0.1f;
-            vector<tensor::TensorPtrVariant> tmp_params = {tmp.get()};
+            vector<tensor::TensorVariant> tmp_params = {tmp};
 
             Optimizer* ptr = new Adam(tmp_params, 0.001f, 0.0f, 0.9f, 0.999f);
             delete ptr;  // virtual destructor asigura cleanup corect
@@ -264,7 +264,7 @@ int main() {
             Tensor<float> target = tensor::zeros<float>({1}, false);
             target.data()[vector<int>{0}] = 3.0f;
 
-            vector<tensor::TensorPtrVariant> params = {x.get()};
+            vector<tensor::TensorVariant> params = {x};
             Adam optimizer(params, 0.3f, 0.0f, 0.9f, 0.999f);
 
             for (int step = 0; step < 30; step++) {

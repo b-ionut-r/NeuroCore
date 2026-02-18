@@ -18,7 +18,7 @@ private:
     std::vector<NDArray<float>*> firstMomentum;
     std::vector<NDArray<float>*> secondMomentum;
 public:
-    Adam(std::vector<tensor::TensorPtrVariant> params, const float &lr,
+    Adam(std::vector<tensor::TensorVariant> params, const float &lr,
          const float &weightDecay, const float &beta1, const float &beta2,
          const double &eps = 1e-8, const ComputeDType &dtype = FLOAT,
          const bool &adamW = false);

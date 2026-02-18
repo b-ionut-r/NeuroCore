@@ -13,14 +13,14 @@
 #include "core/utils.h"
 
 
-SGD::SGD(std::vector<tensor::TensorPtrVariant> params, const float &lr,
+SGD::SGD(std::vector<tensor::TensorVariant> params, const float &lr,
         const float &weightDecay, const float &beta, const ComputeDType &dtype):
         Optimizer(std::move(params), lr, weightDecay, dtype), beta(beta) {
     try {
         for (const auto &param : this->params) {
-            std::visit([&](auto* p) {
+            std::visit([&](auto &p) {
                 // Always create momentum in fp32 for numerical stability
-                auto mom = new NDArray<float>(p->shape());
+                auto mom = new NDArray<float>(p.shape());
                 *mom = 0.0f;
                 momentum.push_back(mom);
             }, param);
@@ -42,15 +42,15 @@ void SGD::step() {
     for (size_t i = 0; i < params.size(); i++) {
         auto run = [&](auto dummy) {
             using compute_t = decltype(dummy);
-            std::visit([&](auto* param) {
-                using param_t = typename std::decay_t<decltype(*param)>::value_type;
-                if (param->requiresGrad() && param->hasGrad()) {
+            std::visit([&](auto &param) {
+                using param_t = typename std::decay_t<decltype(param)>::value_type;
+                if (param.requiresGrad() && param.hasGrad()) {
                     int NThreads = 256;
-                    int NBlocks = utils::getNBlocks(param->size(), NThreads);
+                    int NBlocks = utils::getNBlocks(param.size(), NThreads);
                     fusedSGDKernel<compute_t, param_t, param_t, float><<<NBlocks, NThreads>>>(
-                        param->size(),
-                        param->data().getData(),
-                        param->grad().getData(),
+                        param.size(),
+                        param.data().getData(),
+                        param.grad().getData(),
                         momentum[i]->getData(),
                         lr,
                         weightDecay,

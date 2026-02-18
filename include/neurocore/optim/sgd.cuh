@@ -16,7 +16,7 @@ private:
     float beta;
     std::vector<NDArray<float>*> momentum;
 public:
-    SGD(std::vector<tensor::TensorPtrVariant> params, const float &lr,
+    SGD(std::vector<tensor::TensorVariant> params, const float &lr,
         const float &weightDecay, const float &beta, const ComputeDType &dtype = FLOAT);
     ~SGD() override;
     void step() override;
