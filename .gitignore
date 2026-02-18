@@ -1,0 +1,79 @@
+# -----------------------------
+# CMake / Build outputs
+# -----------------------------
+/cmake-build-*/
+/build/
+/out/
+/CMakeFiles/
+/Testing/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+compile_commands.json
+build.ninja
+.ninja_deps
+.ninja_log
+
+# -----------------------------
+# Compiled binaries / objects
+# -----------------------------
+*.o
+*.obj
+*.lo
+*.la
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.exp
+*.idb
+*.ilk
+*.pdb
+*.pyc
+
+# -----------------------------
+# CUDA generated artifacts
+# -----------------------------
+*.ptx
+*.cubin
+*.fatbin
+*.dlink
+tmpxft_*
+
+# -----------------------------
+# Visual Studio / MSBuild
+# -----------------------------
+*.sln
+*.suo
+*.user
+*.userosscache
+*.vcxproj*
+*.VC.db
+*.opendb
+ipch/
+
+# -----------------------------
+# JetBrains / CLion
+# Keep only shared, stable project metadata if desired.
+# -----------------------------
+.idea/*
+!.idea/.gitignore
+!.idea/misc.xml
+!.idea/modules.xml
+*.iml
+
+# -----------------------------
+# Local helper files
+# -----------------------------
+build_with_vcvars.cmd
+cmake_check.cmd
+
+# -----------------------------
+# OS noise
+# -----------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini

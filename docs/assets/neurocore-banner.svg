@@ -1,0 +1,52 @@
+<svg width="1280" height="360" viewBox="0 0 1280 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bannerBg" x1="0" y1="0" x2="1280" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07121E"/>
+      <stop offset="1" stop-color="#0D2B43"/>
+    </linearGradient>
+    <linearGradient id="bannerAccent" x1="90" y1="70" x2="420" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18D7FF"/>
+      <stop offset="1" stop-color="#54FF99"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="360" rx="28" fill="url(#bannerBg)"/>
+  <circle cx="1160" cy="34" r="220" fill="#123754" opacity="0.35"/>
+  <circle cx="1240" cy="310" r="180" fill="#0A2236" opacity="0.45"/>
+
+  <g stroke="url(#bannerAccent)" stroke-width="8" stroke-linecap="round" opacity="0.95">
+    <line x1="120" y1="150" x2="196" y2="114"/>
+    <line x1="196" y1="114" x2="272" y2="150"/>
+    <line x1="120" y1="230" x2="196" y2="266"/>
+    <line x1="196" y1="266" x2="272" y2="230"/>
+    <line x1="120" y1="150" x2="120" y2="230"/>
+    <line x1="272" y1="150" x2="272" y2="230"/>
+    <line x1="120" y1="150" x2="196" y2="190"/>
+    <line x1="272" y1="150" x2="196" y2="190"/>
+    <line x1="120" y1="230" x2="196" y2="190"/>
+    <line x1="272" y1="230" x2="196" y2="190"/>
+  </g>
+
+  <circle cx="120" cy="150" r="9" fill="#18D7FF"/>
+  <circle cx="196" cy="114" r="9" fill="#18D7FF"/>
+  <circle cx="272" cy="150" r="9" fill="#18D7FF"/>
+  <circle cx="120" cy="230" r="9" fill="#54FF99"/>
+  <circle cx="196" cy="266" r="9" fill="#54FF99"/>
+  <circle cx="272" cy="230" r="9" fill="#54FF99"/>
+  <circle cx="196" cy="190" r="36" fill="#0B2437" stroke="url(#bannerAccent)" stroke-width="6"/>
+  <text x="196" y="199" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="22" fill="#EAF8FF">NC</text>
+
+  <text x="360" y="148" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="68" fill="#F5FCFF">NeuroCore</text>
+  <text x="362" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#B8D9EB">CUDA-first NDArray + Tensor autograd framework in C++20</text>
+
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="600" fill="#DDF5FF">
+    <rect x="362" y="226" width="140" height="42" rx="21" fill="#133C5B"/>
+    <text x="432" y="253" text-anchor="middle">NDArray</text>
+
+    <rect x="516" y="226" width="122" height="42" rx="21" fill="#133C5B"/>
+    <text x="577" y="253" text-anchor="middle">Autograd</text>
+
+    <rect x="652" y="226" width="140" height="42" rx="21" fill="#133C5B"/>
+    <text x="722" y="253" text-anchor="middle">Optimizers</text>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+Started fresh with a new repository (`NeuroCore`). This commit represents the foundational additions and significant enhancements since the initial setup.
+
+Refactor and Expand Framework Core: NDArray, Tensor, and Autograd Engine
+
+This update introduces a major overhaul of the core data structures and the autograd engine, providing a more robust, flexible, and performant foundation for CUDA-accelerated numerical computing.
+
+Core Enhancements:
+- **NDArray & Tensor Refactoring**: Optimized internal memory management and metadata handling. Added support for explicit synchronization and improved device-to-host data transfers.
+- **Naming Cleanup**: Renamed exception base class `ArrcException` to `NeuroCoreException` and updated error prefix from `ArrC` to `NeuroCore`.
+- **Advanced Indexing**: Implemented support for indexing NDArrays and Tensors using other arrays, tensors, or std::vectors of indices. Added a specialized CUDA kernel (`advancedIndexingKernel`) to handle strided and non-contiguous indexing efficiently.
+- **Seamless Vector Integration**: Added utility helpers for recursive vector traversal, allowing NDArrays and Tensors to be initialized from or assigned to nested `std::vector` (e.g., `std::vector<std::vector<float>>`).
+- **Cross-Type Operations**: Introduced macros and traits for automatic type promotion and casting in binary operations (e.g., adding an `NDArray<int>` to an `NDArray<float>`).
+
+Autograd Engine & Functional API:
+- **New Gradient Kernels**: Added `grad_kernels.cuh` containing generic contiguous and strided kernels for backpropagation, significantly reducing boilerplate for new function implementations.
+- **Expanded Math Library**:
+    - Added comprehensive unary and binary math functions in `arr` (NDArray) and `tensor` (Autograd) namespaces.
+    - Supported operations: `exp`, `log`, `sin`, `cos`, `tan`, `cot`, `asin`, `acos`, `atan`, `acot`, `sigmoid`, `abs`, `sign`, `clip`, and `power`.
+    - Added aliases for common operations: `subs`, `mul`, `div`, `pow`.
+- **Shape Manipulations**: Implemented `transpose` and `transposeInPlace` with full autograd support via `TransposeFunction`.
+- **Gradient-Aware Casting**: The `cast<T>()` method now tracks gradients across type conversions, allowing backpropagation through mixed-precision models.
+
+Infrastructure & Utilities:
+- **Slices**: Enhanced `Slice` class to support index-based slicing and improved normalization logic.
+- **Utils**: Added `cudaFreeMulti` for cleaner device memory management and a suite of template-based shape/size helpers for `std::vector`.
+- **Project Structure**: Organized functional implementations into `include/functions/` for better maintainability (arithmetic, math, shape, grad_kernels).
+- **Headers/Includes Migration**: Updated include paths to the new root layout (`include/neurocore/...`) and aligned legacy include names/extensions (e.g., `tensor.h` -> `tensor.cuh`, `arithmetic.h` -> `arithmetic.cuh`, `optim/kernels.cuh` -> `optim/optim_kernels.cuh`).
+- **Project Structure**: Organized functional implementations into `include/neurocore/functions/` for better maintainability (arithmetic, math, shape, grad_kernels).
+- **IDE Config**: Included updated JetBrains/CLion configuration files for improved development environment consistency.

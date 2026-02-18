@@ -1,0 +1,43 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="48" y1="40" x2="472" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#08131F"/>
+      <stop offset="1" stop-color="#11304A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="100" y1="84" x2="392" y2="424" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18D7FF"/>
+      <stop offset="1" stop-color="#54FF99"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="512" height="512" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)" stroke="#2C4F6D" stroke-width="4"/>
+
+  <g filter="url(#glow)" stroke="url(#accent)" stroke-width="14" stroke-linecap="round" opacity="0.9">
+    <line x1="128" y1="172" x2="256" y2="108"/>
+    <line x1="256" y1="108" x2="384" y2="172"/>
+    <line x1="128" y1="340" x2="256" y2="404"/>
+    <line x1="256" y1="404" x2="384" y2="340"/>
+    <line x1="128" y1="172" x2="128" y2="340"/>
+    <line x1="384" y1="172" x2="384" y2="340"/>
+    <line x1="128" y1="172" x2="256" y2="256"/>
+    <line x1="384" y1="172" x2="256" y2="256"/>
+    <line x1="128" y1="340" x2="256" y2="256"/>
+    <line x1="384" y1="340" x2="256" y2="256"/>
+  </g>
+
+  <g>
+    <circle cx="128" cy="172" r="18" fill="#18D7FF"/>
+    <circle cx="256" cy="108" r="18" fill="#18D7FF"/>
+    <circle cx="384" cy="172" r="18" fill="#18D7FF"/>
+    <circle cx="128" cy="340" r="18" fill="#54FF99"/>
+    <circle cx="256" cy="404" r="18" fill="#54FF99"/>
+    <circle cx="384" cy="340" r="18" fill="#54FF99"/>
+  </g>
+
+  <circle cx="256" cy="256" r="78" fill="#0B2437" stroke="url(#accent)" stroke-width="10"/>
+  <text x="256" y="274" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="52" fill="#EAF8FF">NC</text>
+</svg>
