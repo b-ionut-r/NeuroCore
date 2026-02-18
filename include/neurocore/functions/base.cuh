@@ -89,6 +89,16 @@ NDArray<dtype> reduceGradToShape(const NDArray<dtype> &grad,
                                  const std::vector<int> &targetShape) {
     const auto gradShape = grad.getShape();
     if (gradShape == targetShape) return grad;
+
+    if (gradShape.size() != targetShape.size()) {
+        throw ShapeMismatchException("Gradient reduction target has different ndim.");
+    }
+    for (size_t i = 0; i < gradShape.size(); i++) {
+        if (targetShape[i] != gradShape[i] && targetShape[i] != 1) {
+            throw ShapeMismatchException("Gradient reduction target is not broadcast-compatible.");
+        }
+    }
+
     // TODO: Implement proper broadcasting gradient reduction
     // custom reduction CUDA Kernel may be needed here
     throw ShapeMismatchException("Gradient reduction to target shape not implemented.");

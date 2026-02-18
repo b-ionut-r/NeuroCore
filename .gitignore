@@ -57,12 +57,8 @@ ipch/
 
 # -----------------------------
 # JetBrains / CLion
-# Keep only shared, stable project metadata if desired.
 # -----------------------------
-.idea/*
-!.idea/.gitignore
-!.idea/misc.xml
-!.idea/modules.xml
+.idea/
 *.iml
 
 # -----------------------------

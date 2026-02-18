@@ -680,6 +680,7 @@ void NDArray<dtype>::allocateDeviceMetadata(int** dStrides, int** dShape) const 
 template <typename dtype>
 NDArray<dtype> NDArray<dtype>::transpose(std::vector<int> perm) const {
     if (perm.empty()) {
+        perm.resize(ndim);
         for (int i = 0; i < ndim; i++) {
             perm[i] = i;
         }
@@ -702,6 +703,7 @@ NDArray<dtype> NDArray<dtype>::transpose(std::vector<int> perm) const {
 template<typename dtype>
 NDArray<dtype> NDArray<dtype>::transposeInPlace(std::vector<int> perm) {
     if (perm.empty()) {
+        perm.resize(ndim);
         for (int i = 0; i < ndim; i++) {
             perm[i] = i;
         }
@@ -1034,9 +1036,9 @@ namespace arr {
         out = a.executeElementWise(CotOp<dtype>{}, nullptr, &out);
     }
 
-    template <typename dtype>
-    NDArray<dtype> asin(const NDArray<dtype> &a) {
-        a.executeElementWise(ASinOp<dtype>{}, nullptr, nullptr);
+template <typename dtype>
+NDArray<dtype> asin(const NDArray<dtype> &a) {
+        return a.executeElementWise(ASinOp<dtype>{}, nullptr, nullptr);
     }
     template <typename dtype>
     void asin(const NDArray<dtype> &a, NDArray<dtype> &out) {

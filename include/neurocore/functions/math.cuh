@@ -121,7 +121,7 @@ class ClipFunction: public Function<dtype> {
 private:
     dtype low, high;
 public:
-    explicit ClipFunction(std::shared_ptr<TensorImpl<dtype>> a):
+    explicit ClipFunction(std::shared_ptr<TensorImpl<dtype>> a, dtype low, dtype high):
     Function<dtype>({std::move(a)}), low(low), high(high){}
     NDArray<dtype> forward() override {
         return arr::clip(this->parents[0]->data, low, high);
@@ -131,7 +131,7 @@ public:
         if (a->requiresGrad) {
             auto aGrad = NDArray<dtype>(outGrad.getShape());
             executeGrad<dtype, ClipGradOp<dtype>>(
-                ClipGradOp<dtype>{},
+                ClipGradOp<dtype>{low, high},
                 outGrad,
                 a->data,
                 &aGrad
@@ -259,7 +259,7 @@ class ACosFunction: public Function<dtype> {
 public:
     explicit ACosFunction(std::shared_ptr<TensorImpl<dtype>> a): Function<dtype>({std::move(a)}) {}
     NDArray<dtype> forward() override {
-        return arr::asin(this->parents[0]->data);
+        return arr::acos(this->parents[0]->data);
     }
     void backward(const NDArray<dtype> &outGrad) override {
         auto &a = this->parents[0];
@@ -282,7 +282,7 @@ class ATanFunction: public Function<dtype> {
 public:
     explicit ATanFunction(std::shared_ptr<TensorImpl<dtype>> a): Function<dtype>({std::move(a)}) {}
     NDArray<dtype> forward() override {
-        return arr::asin(this->parents[0]->data);
+        return arr::atan(this->parents[0]->data);
     }
     void backward(const NDArray<dtype> &outGrad) override {
         auto &a = this->parents[0];
@@ -304,7 +304,7 @@ class ACotFunction: public Function<dtype> {
 public:
     explicit ACotFunction(std::shared_ptr<TensorImpl<dtype>> a): Function<dtype>({std::move(a)}) {}
     NDArray<dtype> forward() override {
-        return arr::asin(this->parents[0]->data);
+        return arr::acot(this->parents[0]->data);
     }
     void backward(const NDArray<dtype> &outGrad) override {
         auto &a = this->parents[0];
