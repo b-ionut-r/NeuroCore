@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <variant>
+#include <utility>
 #include "core/tensor.cuh"
 
 /*
@@ -27,7 +28,7 @@ protected:
 public:
     Optimizer(std::vector<tensor::TensorVariant> params, const float &lr, const float &weightDecay,
               const ComputeDType &dtype = FLOAT):
-              params(params), lr(lr), weightDecay(weightDecay), dtype(dtype) {};
+              params(std::move(params)), lr(lr), weightDecay(weightDecay), dtype(dtype) {};
     virtual ~Optimizer() {}
     virtual void step() = 0;
     void zeroGrad() {
