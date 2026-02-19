@@ -6,9 +6,11 @@
 #define NEUROCORE_ELEMENTWISE_KERNELS_CUH
 
 
-/// Refactored templates for element-wise operations
+/// Refactored templates for element-wise FORWARD operations
 /// 2 variants: contiguous and strided (views) arrays
 /// Supports different input/output types (e.g., for casting)
+/// Utilizes grid-stride loops to decouple grid launch size
+/// from tensor size when hardware-capped
 
 template<typename OutDtype, typename InDtype, typename Op>
 __global__ void elementWiseKernelContiguous(
@@ -18,12 +20,15 @@ __global__ void elementWiseKernelContiguous(
     const InDtype *a, const int aOffset,
     const InDtype *b = nullptr, const int bOffset = 0)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size) return;
-    output[outOffset + idx] = op(
-        a[aOffset + idx],
-        b ? b[bOffset + idx]: InDtype(0)
-    );
+    for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+         idx < size;
+         idx += blockDim.x * gridDim.x)
+    {
+        output[outOffset + idx] = op(
+            a[aOffset + idx],
+            b ? b[bOffset + idx]: InDtype(0)
+        );
+    }
 }
 
 
@@ -36,26 +41,28 @@ __global__ void elementWiseKernelStrided(
     const InDtype *b = nullptr, const int bOffset = 0, const int *bStrides = nullptr
 )
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size) return;
+    for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+         idx < size;
+         idx += blockDim.x * gridDim.x)
+    {
+        // decompose flat idx into per-dim coords, accumulate strided offsets in one pass
+        size_t multiIdx, remaining = idx;
+        size_t outIdx = outOffset, aIdx = aOffset, bIdx = bOffset;
 
-    // decompose flat idx into per-dim coords, accumulate strided offsets in one pass
-    int multiIdx, remaining = idx;
-    int outIdx = outOffset, aIdx = aOffset, bIdx = bOffset;
-    for (int i = ndim - 1; i >= 0; i--) {
-        multiIdx = remaining % shape[i];  // coordinate along dim i
-        remaining /= shape[i];
-        outIdx += multiIdx * outStrides[i];
-        aIdx   += multiIdx * aStrides[i];
-        if (bStrides) bIdx += multiIdx * bStrides[i];  // skip if unary op
+        for (int i = ndim - 1; i >= 0; i--) {
+            multiIdx = remaining % shape[i];  // coordinate along dim i
+            remaining /= shape[i];
+            outIdx += multiIdx * outStrides[i];
+            aIdx   += multiIdx * aStrides[i];
+            if (bStrides) bIdx += multiIdx * bStrides[i];  // skip if unary op
+        }
+
+        output[outIdx] = op(
+            a[aIdx],
+            b ? b[bIdx] : InDtype(0)
+        );
     }
-
-    output[outIdx] = op(
-        a[aIdx],
-        b ? b[bIdx] : InDtype(0)
-    );
 }
-
 
 
 template <typename dtype>
@@ -71,22 +78,24 @@ __global__ void gatherKernel(
     const int srcOffset
 )
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= dstSize) return;
+    for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+         idx < dstSize;
+         idx += blockDim.x * gridDim.x)
+    {
+        size_t multiIdx, remaining = idx;
+        size_t indicesIdx, srcIdx = srcOffset, runningSum = nIndices;
 
-    int multiIdx, remaining = idx;
-    int indicesIdx, srcIdx = srcOffset, runningSum = nIndices;
+        // decompose flat idx into per-dim coordinates, accumulate src offset
+        for (int i = nDim - 1; i >= 0; i--) {
+            multiIdx = remaining % dstShape[i];  // coordinate along dim i
+            remaining /= dstShape[i];
+            runningSum -= dstShape[i];           // start of dim i's index block
+            indicesIdx = runningSum + multiIdx;  // lookup into concatenated indices
+            srcIdx += indices[indicesIdx] * srcStrides[i];
+        }
 
-    // decompose flat idx into per-dim coordinates, accumulate src offset
-    for (int i = nDim - 1; i >= 0; i--) {
-        multiIdx = remaining % dstShape[i];  // coordinate along dim i
-        remaining /= dstShape[i];
-        runningSum -= dstShape[i];           // start of dim i's index block
-        indicesIdx = runningSum + multiIdx;  // lookup into concatenated indices
-        srcIdx += indices[indicesIdx] * srcStrides[i];
+        dst[idx] = src[srcIdx];
     }
-
-    dst[idx] = src[srcIdx];
 }
 
 

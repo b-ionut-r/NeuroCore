@@ -28,7 +28,7 @@ class Slice {
     std::vector<int> indices;
     bool fromIndices;
 public:
-    Slice(int start, int stop, int step=1) : start(start), stop(stop), step(step), fromIndices(false) {};
+    Slice(int start=0, int stop=-1, int step=1) : start(start), stop(stop), step(step), fromIndices(false) {};
     Slice(const std::vector<int> &indices): indices(indices), fromIndices(true) {};
     Slice(const NDArray<int> &indices);
     Slice(const Tensor<int> &indices);

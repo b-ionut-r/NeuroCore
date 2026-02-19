@@ -5,17 +5,27 @@
 namespace utils {
 
     std::vector<int> getSizeAgnosticKernelConfigParams() {
-        std::vector<int> params(2);
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, 0);
-        params[0] = prop.multiProcessorCount * 8;
-        params[1] = 256;
+        static std::vector<int> params(2);
+        static bool initialized = false;
+        // Only hit the CUDA API and assign values the first time
+        if (!initialized) {
+            cudaDeviceProp prop;
+            cudaGetDeviceProperties(&prop, 0);
+            params[0] = prop.multiProcessorCount * 8; // max blocks
+            params[1] = 256;                          // threads per block
+            initialized = true;
+        }
         return params;
     }
 
     int getNBlocks(int n, int threads) {
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, 0);
+        static cudaDeviceProp prop;
+        static bool initialized = false;
+        // Only call the slow API once
+        if (!initialized) {
+            cudaGetDeviceProperties(&prop, 0);
+            initialized = true;
+        }
         int blocks = (n + threads - 1) / threads;
         int maxBlocks = 8 * prop.multiProcessorCount;
         if (blocks <= maxBlocks) return blocks;

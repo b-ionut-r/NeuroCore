@@ -10,6 +10,8 @@
 
 /// GENERIC KERNELS FOR GRADIENT OPERATIONS
 /// Handles: 3 Inputs (a, b, gradOutput) -> 2 Outputs (gradA, gradB)
+/// Utilizes grid-stride loops to decouple grid launch size
+/// from tensor size when hardware-capped
 
 template<typename dtype, typename Op>
 __global__ void gradKernelContiguous(
@@ -21,17 +23,20 @@ __global__ void gradKernelContiguous(
     dtype *bGrad = nullptr, const int bGradOffset = 0  // optional by grad
 )
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size) return;
-    op(
-       outGrad[outGradOffset + idx],
-       a[aOffset + idx],
-       aGrad ? aGrad + aGradOffset + idx : nullptr,
-       b ? b[bOffset + idx] : dtype(0),
-       bGrad ? bGrad + bGradOffset + idx : nullptr
-    );
+    // Grid-stride loop
+    for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+         idx < size;
+         idx += blockDim.x * gridDim.x)
+    {
+        op(
+           outGrad[outGradOffset + idx],
+           a[aOffset + idx],
+           aGrad ? aGrad + aGradOffset + idx : nullptr,
+           b ? b[bOffset + idx] : dtype(0),
+           bGrad ? bGrad + bGradOffset + idx : nullptr
+        );
+    }
 }
-
 
 
 template<typename dtype, typename Op>
@@ -44,34 +49,38 @@ __global__ void gradKernelStrided(
     dtype *bGrad = nullptr, const int bGradOffset = 0, const int *bGradStrides = nullptr
 )
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size) return;
+    // Grid-stride loop
+    for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+         idx < size;
+         idx += blockDim.x * gridDim.x)
+    {
+        // Decompose flat idx into per-dim coords, accumulate strided offsets in one pass
+        size_t multiIdx, remaining = idx;
+        size_t outGradIdx = outGradOffset, aIdx = aOffset, bIdx = bOffset;
+        size_t aGradIdx = aGradOffset, bGradIdx = bGradOffset;
 
-    // decompose flat idx into per-dim coords, accumulate strided offsets in one pass
-    int multiIdx, remaining = idx;
-    int outGradIdx = outGradOffset, aIdx = aOffset, bIdx = bOffset;
-    int aGradIdx = aGradOffset, bGradIdx = bGradOffset;
-    for (int i = ndim - 1; i >= 0; i--) {
-        multiIdx = remaining % shape[i];
-        remaining /= shape[i];
-        outGradIdx += multiIdx * outGradStrides[i];
-        aIdx += multiIdx * aStrides[i];
-        if (aGrad) aGradIdx += multiIdx * aGradStrides[i];
-        if (b) bIdx += multiIdx * bStrides[i];
-        if (bGrad) bGradIdx += multiIdx * bGradStrides[i];
+        for (int i = ndim - 1; i >= 0; i--) {
+            multiIdx = remaining % shape[i];
+            remaining /= shape[i];
+            outGradIdx += multiIdx * outGradStrides[i];
+            aIdx += multiIdx * aStrides[i];
+            if (aGrad) aGradIdx += multiIdx * aGradStrides[i];
+            if (b) bIdx += multiIdx * bStrides[i];
+            if (bGrad) bGradIdx += multiIdx * bGradStrides[i];
+        }
+
+        op(
+            outGrad[outGradIdx],
+            a[aIdx],
+            aGrad ? aGrad + aGradIdx : nullptr,
+            b ? b[bIdx]: dtype(0),
+            bGrad ? bGrad + bGradIdx : nullptr
+        );
     }
-    op(
-        outGrad[outGradIdx],
-        a[aIdx],
-        aGrad ? aGrad + aGradIdx : nullptr,
-        b ? b[bIdx]: dtype(0),
-        bGrad ? bGrad + bGradIdx : nullptr
-    );
 }
 
 
 /// GRADIENT FUNCTORS
-///
 template <typename dtype>
 struct DivGradOp {
     __device__ void operator()(
@@ -95,7 +104,6 @@ struct PowGradOp {
         if (bGrad) *bGrad += outGrad * log(a) * pow(a, b - 1);
     }
 };
-///
 template <typename dtype>
 struct ExpGradOp {
     dtype base = static_cast<dtype>(std::exp(1.0));

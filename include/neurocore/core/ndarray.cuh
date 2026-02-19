@@ -336,10 +336,9 @@ NDArray<dtype> NDArray<dtype>::operator[](std::vector<Slice> slices) {
     bool atLeastOneFromIndices = false;
     for (int i = 0; i < ndim; i++) {
         Slice &slice = slices[i];
-        if (slice.isFromIndices()) {
+        if (slice.isFromIndices())
             atLeastOneFromIndices = true;
-            slice.normalizeEnd(shape[i]);
-        }
+        else slice.normalizeEnd(shape[i]);
         std::vector<int> idxs = slice.getIndices();
         indices.insert(indices.end(), idxs.begin(), idxs.end());
         nIndices += idxs.size();
@@ -943,7 +942,7 @@ namespace arr {
     }
     template <typename dtype>
     void power(const NDArray<dtype> &a, const NDArray<dtype> &b, NDArray<dtype> &out) {
-        out = a.executeElementWise(PowOp<dtype>{}, &b, &out);
+        a.executeElementWise(PowOp<dtype>{}, &b, &out);
     }
     template <typename dtype>
     NDArray<dtype> pow(const NDArray<dtype> &a, const NDArray<dtype> &b) {
@@ -974,7 +973,7 @@ namespace arr {
     }
     template <typename dtype>
     void raise(const NDArray<dtype> &a, const dtype exponent, NDArray<dtype> &out) {
-        out = a.executeElementWise(RaiseOp<dtype>{exponent}, nullptr, &out);
+        a.executeElementWise(RaiseOp<dtype>{exponent}, nullptr, &out);
     }
     template <typename dtype>
     NDArray<dtype> exp(const NDArray<dtype> &a,
@@ -985,7 +984,7 @@ namespace arr {
     void exp(const NDArray<dtype> &a,
         NDArray<dtype> &out,
         const dtype base=static_cast<dtype>(std::exp(1.0))) {
-        out = a.executeElementWise(ExpOp<dtype>{base}, nullptr, &out);
+        a.executeElementWise(ExpOp<dtype>{base}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -997,7 +996,7 @@ namespace arr {
     void log(const NDArray<dtype> &a,
         NDArray<dtype> &out,
         const dtype base=static_cast<dtype>(std::exp(1.0))) {
-        out = a.executeElementWise(LogOp<dtype>{base}, nullptr, &out);
+        a.executeElementWise(LogOp<dtype>{base}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1006,7 +1005,7 @@ namespace arr {
     }
     template <typename dtype>
     void sin(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(SinOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(SinOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1015,7 +1014,7 @@ namespace arr {
     }
     template <typename dtype>
     void cos(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(CosOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(CosOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1024,7 +1023,7 @@ namespace arr {
     }
     template <typename dtype>
     void tan(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(TanOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(TanOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1033,16 +1032,16 @@ namespace arr {
     }
     template <typename dtype>
     void cot(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(CotOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(CotOp<dtype>{}, nullptr, &out);
     }
 
-template <typename dtype>
-NDArray<dtype> asin(const NDArray<dtype> &a) {
+    template <typename dtype>
+    NDArray<dtype> asin(const NDArray<dtype> &a) {
         return a.executeElementWise(ASinOp<dtype>{}, nullptr, nullptr);
     }
     template <typename dtype>
     void asin(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(ASinOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(ASinOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1051,7 +1050,7 @@ NDArray<dtype> asin(const NDArray<dtype> &a) {
     }
     template <typename dtype>
     void acos(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(ACosOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(ACosOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1060,7 +1059,7 @@ NDArray<dtype> asin(const NDArray<dtype> &a) {
     }
     template <typename dtype>
     void atan(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(ATanOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(ATanOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1069,7 +1068,7 @@ NDArray<dtype> asin(const NDArray<dtype> &a) {
     }
     template <typename dtype>
     void acot(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(ACotOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(ACotOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1078,7 +1077,7 @@ NDArray<dtype> asin(const NDArray<dtype> &a) {
     }
     template <typename dtype>
     void sigmoid(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(SigmoidOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(SigmoidOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1087,7 +1086,7 @@ NDArray<dtype> asin(const NDArray<dtype> &a) {
     }
     template <typename dtype>
     void abs(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(AbsOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(AbsOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1096,7 +1095,7 @@ NDArray<dtype> asin(const NDArray<dtype> &a) {
     }
     template <typename dtype>
     void sign(const NDArray<dtype> &a, NDArray<dtype> &out) {
-        out = a.executeElementWise(SignOp<dtype>{}, nullptr, &out);
+        a.executeElementWise(SignOp<dtype>{}, nullptr, &out);
     }
 
     template <typename dtype>
@@ -1105,7 +1104,7 @@ NDArray<dtype> asin(const NDArray<dtype> &a) {
     }
     template <typename dtype>
     void clip(const NDArray<dtype> &a, dtype low, dtype high, NDArray<dtype> &out) {
-        out = a.executeElementWise(ClipOp<dtype>{low, high}, nullptr, &out);
+        a.executeElementWise(ClipOp<dtype>{low, high}, nullptr, &out);
     }
 
 
