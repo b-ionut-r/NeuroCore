@@ -19,8 +19,8 @@ class Tensor;
 struct Shape {
     std::vector<int> dims;
     Shape() = default;
-    Shape(const std::initializer_list<int> &shape) : dims(shape) {}
-    Shape(const std::vector<int> &shapeVec) : dims(shapeVec) {}
+    explicit Shape(const std::initializer_list<int> &shape) : dims(shape) {}
+    explicit Shape(const std::vector<int> &shapeVec) : dims(shapeVec) {}
 };
 
 class Slice {

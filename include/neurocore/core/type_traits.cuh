@@ -13,6 +13,32 @@ class NDArray;
 template <typename dtype>
 class Tensor;
 
+/////////////////////////////////// RECURSIVE VECTORS HELPERS //////////////////////////
+namespace utils {
+    template<typename T>
+    struct NestedVec {
+        std::vector<T> flat;
+        std::vector<int> shape;
+        NestedVec(T val) : flat{val}, shape{} {}
+        NestedVec(std::initializer_list<NestedVec<T>> list) {
+            if (list.size() == 0) return;
+            shape = {(int)list.size()};
+            auto it = list.begin();
+            shape.insert(shape.end(), it->shape.begin(), it->shape.end());
+
+            // Check all elements have the same shape as the first
+            const std::vector<int> expectedShape = it->shape;
+            for (auto &inner : list) {
+                if (inner.shape != expectedShape)
+                    throw std::invalid_argument(
+                        "NestedVec: non-homogeneous initializer — all elements must have the same shape."
+                    );
+                flat.insert(flat.end(), inner.flat.begin(), inner.flat.end());
+            }
+        }
+    };
+}
+
 
 
 /// CROSS-TYPE BINARY OPERATORS FOR NDARRAY AND TENSOR

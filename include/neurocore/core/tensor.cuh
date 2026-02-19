@@ -44,7 +44,7 @@ struct TensorImpl {
 
     void ensureGrad() {
         if (!hasGrad) {
-            grad = data.zeros_like();
+            grad = data.zerosLike();
             hasGrad = true;
         }
     }
@@ -76,18 +76,18 @@ public:
     using value_type = dtype;
     Tensor()
         : impl(std::make_shared<TensorImpl<dtype>>()) {}
-    Tensor(const Shape &shape, bool requiresGrad = false):
+    explicit Tensor(const Shape &shape, bool requiresGrad = false):
         impl(std::make_shared<TensorImpl<dtype>>(NDArray<dtype>(shape), requiresGrad)) {}
-    Tensor(const NDArray<dtype> &data, bool requiresGrad = false)
+    explicit Tensor(const NDArray<dtype> &data, bool requiresGrad = false)
         : impl(std::make_shared<TensorImpl<dtype>>(data, requiresGrad)) {}
-    Tensor(const std::vector<dtype> &data, bool requiresGrad = false)
-        : impl(std::make_shared<TensorImpl<dtype>>(NDArray<dtype>(data), requiresGrad)) {}
-    Tensor(NDArray<dtype> &&data, bool requiresGrad = false)
+    explicit Tensor(const utils::NestedVec<dtype> &vec, bool requiresGrad = false)
+        : impl(std::make_shared<TensorImpl<dtype>>(NDArray<dtype>(vec), requiresGrad)) {}
+    explicit Tensor(NDArray<dtype> &&data, bool requiresGrad = false)
         : impl(std::make_shared<TensorImpl<dtype>>(std::move(data), requiresGrad)) {}
     Tensor(const Tensor &rhs) = default;
     Tensor& operator=(const Tensor &rhs) = default;
-    Tensor& operator=(const NDArray<dtype> &rhs) { impl->data = rhs; return *this; }
-    Tensor& operator=(const std::vector<dtype> &rhs) { impl->data = NDArray<dtype>(rhs); return *this;}
+    Tensor& operator=(const NDArray<dtype> &vec) { impl->data = vec; return *this; }
+    Tensor& operator=(const utils::NestedVec<dtype> &rhs) { impl->data = rhs; return *this;}
     Tensor& operator=(dtype value){impl->data = value; return *this;}
     Tensor detach() const { return Tensor(impl->data, false);}
     ~Tensor() = default;
@@ -165,7 +165,7 @@ Tensor<newDtype> Tensor<dtype>::cast() const {
 template <typename dtype>
 void Tensor<dtype>::backwardFromImpl(const std::shared_ptr<TensorImpl<dtype>> &root, bool seedOnes) {
     if (!root) return;
-    if (seedOnes) root->accumulateGrad(root->data.ones_like());
+    if (seedOnes) root->accumulateGrad(root->data.onesLike());
     else if (!root->hasGrad) return;
 
     std::vector<std::shared_ptr<TensorImpl<dtype>>> topo;
@@ -217,14 +217,14 @@ namespace tensor {
     >;
 
     template <typename dtype>
-    Tensor<dtype> zeros(const std::vector<int> &shape, bool requiresGrad = false) {
+    Tensor<dtype> zeros(const Shape &shape, bool requiresGrad = false) {
         NDArray<dtype> out(shape);
         out = static_cast<dtype>(0);
         return Tensor<dtype>(std::move(out), requiresGrad);
     }
 
     template <typename dtype>
-    Tensor<dtype> ones(const std::vector<int> &shape, bool requiresGrad = false) {
+    Tensor<dtype> ones(const Shape &shape, bool requiresGrad = false) {
         NDArray<dtype> out(shape);
         out = static_cast<dtype>(1);
         return Tensor<dtype>(std::move(out), requiresGrad);

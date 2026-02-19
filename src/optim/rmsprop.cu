@@ -18,7 +18,7 @@ RMSProp::RMSProp(std::vector<tensor::TensorVariant> params, const float &lr,
         for (const auto &param: this->params) {
             std::visit([&](auto &p) {
                 // Always create momentum in fp32 for numerical stability
-                auto mom = new NDArray<float>(p.shape());
+                auto mom = new NDArray<float>(Shape(p.shape()));
                 *mom = 0.0f;
                 momentum.push_back(mom);
             }, param);

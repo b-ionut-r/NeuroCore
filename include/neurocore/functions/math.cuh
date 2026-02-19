@@ -368,7 +368,7 @@ namespace tensor {
     }
     template <typename dtype>
     Tensor<dtype> cube(const Tensor<dtype> &a) {
-        return raise(a, static_cast<dtype>(2.0));
+        return raise(a, static_cast<dtype>(3.0));
     }
     template <typename dtype>
     Tensor<dtype> sqrt(const Tensor<dtype> &a) {

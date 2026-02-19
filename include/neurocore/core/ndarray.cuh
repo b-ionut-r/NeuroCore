@@ -52,12 +52,12 @@ public:
     using value_type = dtype;
     /// CONSTRUCTORS and DESTRUCTORS
     NDArray(); // default constructor
-    NDArray(const Shape &shape); // alocator constructor
+    explicit NDArray(const Shape &shape); // alocator constructor
     void _computeStrides();
     NDArray(dtype *data, const std::vector<int> &shape, const int &offset,
             const std::vector<int> &strides); // viewer constructor
     NDArray(const NDArray<dtype> &other); // copy constructor
-    NDArray(const std::vector<dtype> &vec); // constructor from nested vector
+    explicit NDArray(const utils::NestedVec<dtype> &vec); // constructor from nested vector
     NDArray(NDArray<dtype> &&other) noexcept; /* move constructor
     for returned rvalues views of ndarray. */
     NDArray& operator=(NDArray<dtype> &&other) noexcept; // move assignment
@@ -95,7 +95,7 @@ public:
     NDArray operator[](std::vector<Slice> slices);
     NDArray& operator=(const dtype &value);
     NDArray& operator=(const NDArray &other);
-    NDArray& operator=(const std::vector<dtype> &vec);
+    NDArray& operator=(const utils::NestedVec<dtype> &vec);
     NDArray operator+(const NDArray &other) const;
     NDArray operator+(const dtype &value) const;
     NDArray operator-() const;
@@ -114,8 +114,8 @@ public:
     std::vector<dtype> toVector() const;
     template <typename newDtype>
     NDArray<newDtype> cast() const;
-    NDArray zeros_like() const;
-    NDArray ones_like() const;
+    NDArray zerosLike() const;
+    NDArray onesLike() const;
 };
 
 template<typename dtype>
@@ -216,24 +216,23 @@ NDArray<dtype>::NDArray(const NDArray<dtype> &other):
 }
 
 template<typename dtype>
-NDArray<dtype>::NDArray(const std::vector<dtype> &vec):
-    shape(utils::nestedVectorShape(vec)),
-    ndim(static_cast<int>(utils::nestedVectorRank(vec))),
-    size(utils::nestedVectorElementCount(vec)),
-    itemBytes(sizeof(dtype)), offset(0), ownsData(true), id(++idGenerator)
+NDArray<dtype>::NDArray(const utils::NestedVec<dtype> &vec) :
+    shape(vec.shape.empty() ? std::vector<int>{(int)vec.flat.size()} : vec.shape),
+    ndim(shape.size()),
+    strides(shape.size()),
+    itemBytes(sizeof(dtype)),
+    offset(0), ownsData(true), id(++idGenerator)
 {
-    if (!utils::isNestedVectorHomogeneous(vec))
-        throw ShapeMismatchException("Cannot create NDArray from non-homogeneous vector.");
+    size = 1;
+    for (int d : shape) size *= d;
     N_BLOCKS = (size + N_THREADS - 1) / N_THREADS;
     _computeStrides();
     cudaError_t err = cudaMallocManaged(&data, size * itemBytes);
-    if (err != cudaSuccess) {
+    if (err != cudaSuccess)
         throw CudaKernelException("OOM during NDArray allocation");
-    }
     totalAllocatedMemory += size * itemBytes;
-    utils::flattenNestedVectorToStrided(vec, data, offset, strides, shape, ndim);
+    cudaMemcpy(data, vec.flat.data(), size * itemBytes, cudaMemcpyHostToDevice);
 }
-
 
 template<typename dtype>
 NDArray<dtype>::NDArray(NDArray<dtype> &&other) noexcept:
@@ -396,7 +395,7 @@ NDArray<dtype> NDArray<dtype>::executeElementWise(
     if (other == nullptr) {
         first = this;
         second = other;
-        result = final? final: new NDArray<dtype>(first->shape);
+        result = final? final: new NDArray<dtype>(Shape(first->shape));
         if(final == nullptr) delResult = true;
     } else {
         auto info = getBroadcastInfo(*this, *other);
@@ -418,7 +417,7 @@ NDArray<dtype> NDArray<dtype>::executeElementWise(
             second = new NDArray<dtype>(other->data, info.finalShape, other->offset, newStrides);
             delSecond = true;
         }
-        result = final ? final : new NDArray<dtype>(info.finalShape);
+        result = final ? final : new NDArray<dtype>(Shape(info.finalShape));
         delResult = (final == nullptr);
     }
     cudaError_t err = cudaSuccess;
@@ -504,17 +503,15 @@ NDArray<dtype>& NDArray<dtype>::operator=(const NDArray<dtype> &other) {
     return *this;  // Return reference to this, not the temporary from executeElementWise
 }
 
-template <typename dtype>
-NDArray<dtype>& NDArray<dtype>::operator=(const std::vector<dtype> &vec) {
-    if (!utils::isNestedVectorHomogeneous(vec))
-        throw ShapeMismatchException("Cannot assign nested vector with non-homogenous data.");
-    if (ndim != static_cast<int>(utils::nestedVectorRank(vec)))
-        throw NDimMismatchException("Cannot assign nested vector of different ndim.");
-    if (size != utils::nestedVectorElementCount(vec))
-        throw SizeMismatchException("Cannot assign nested vector of different size.");
-    if (shape != utils::nestedVectorShape(vec))
-        throw ShapeMismatchException("Cannot assign nested vector of different shape.");
-    utils::flattenNestedVectorToStrided(vec, data, offset, strides, shape, ndim);
+template<typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator=(const utils::NestedVec<dtype> &vec) {
+    std::vector<int> vecShape = vec.shape.empty()
+        ? std::vector<int>{(int)vec.flat.size()} : vec.shape;
+    if (shape != vecShape)
+        throw ShapeMismatchException("Cannot assign initializer of different shape.");
+    if (size != (int)vec.flat.size())
+        throw SizeMismatchException("Cannot assign initializer of different size.");
+    cudaMemcpy(data, vec.flat.data(), size * itemBytes, cudaMemcpyHostToDevice);
     return *this;
 }
 
@@ -784,15 +781,15 @@ NDArray<newDtype> NDArray<dtype>::cast() const {
 
 
 template<typename dtype>
-NDArray<dtype> NDArray<dtype>::zeros_like() const {
-    NDArray<dtype> zeros(shape);
+NDArray<dtype> NDArray<dtype>::zerosLike() const {
+    NDArray<dtype> zeros((Shape(shape)));
     zeros = 0;
     return zeros;
 }
 
 template<typename dtype>
-NDArray<dtype> NDArray<dtype>::ones_like() const {
-    NDArray<dtype> ones(shape);
+NDArray<dtype> NDArray<dtype>::onesLike() const {
+    NDArray<dtype> ones((Shape(shape)));
     ones = 1;
     return ones;
 }
@@ -895,11 +892,11 @@ namespace arr {
     }
     template <typename dtype>
     NDArray<dtype> subs(const NDArray<dtype> &a, const NDArray<dtype> &b) {
-        return substract(a, b);
+        return subtract(a, b);
     }
     template <typename dtype>
     void subs(const NDArray<dtype> &a, const NDArray<dtype> &b, NDArray<dtype> &out) {
-        substract(a, b, out);
+        subtract(a, b, out);
     }
 
     template <typename dtype>

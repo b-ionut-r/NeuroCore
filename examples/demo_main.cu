@@ -131,8 +131,8 @@ int main() {
             cout << "\n--- Demo Tensor & Autograd ---\n";
 
             // Handle-style Tensor API (shared_ptr internally)
-            Tensor<float> x = tensor::zeros<float>({1}, true);
-            Tensor<float> y = tensor::zeros<float>({1}, true);
+            Tensor<float> x = tensor::zeros<float>(Shape({1}), true);
+            Tensor<float> y = tensor::zeros<float>(Shape({1}), true);
             x.data()[vector<int>{0}] = 3.0f;
             y.data()[vector<int>{0}] = 4.0f;
 
@@ -159,7 +159,7 @@ int main() {
             cout << "\n--- Demo Optimizers ---\n";
 
             // Cream un tensor pentru parametri (handle-style API)
-            Tensor<float> w = tensor::ones<float>({2, 2}, true);
+            Tensor<float> w = tensor::ones<float>(Shape({2, 2}), true);
             w.grad() = 0.1f;
 
             vector<tensor::TensorVariant> params = {w};
@@ -188,7 +188,7 @@ int main() {
 
             // Virtual destructor demo
             cout << "\nVirtual destructor test:\n";
-            Tensor<float> tmp = tensor::ones<float>({1}, true);
+            Tensor<float> tmp = tensor::ones<float>(Shape({1}), true);
             tmp.grad() = 0.1f;
             vector<tensor::TensorVariant> tmp_params = {tmp};
 
@@ -258,10 +258,10 @@ int main() {
             cout << "\n--- Demo Training ---\n";
             cout << "Minimizam f(x) = (x - 3)^2, start x = 10\n\n";
 
-            Tensor<float> x = tensor::zeros<float>({1}, true);
+            Tensor<float> x = tensor::zeros<float>(Shape({1}), true);
             x.data()[vector<int>{0}] = 10.0f;
 
-            Tensor<float> target = tensor::zeros<float>({1}, false);
+            Tensor<float> target = tensor::zeros<float>(Shape({1}), false);
             target.data()[vector<int>{0}] = 3.0f;
 
             vector<tensor::TensorVariant> params = {x};
