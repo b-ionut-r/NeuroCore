@@ -13,12 +13,6 @@
 
 template <typename dtype>
 class Tensor;
-
-namespace tensor {
-    template <typename dtype>
-    Tensor<dtype> transpose(const Tensor<dtype> &tensor, const std::vector<int> &perm);
-}
-
 template <typename dtype>
 struct TensorImpl;
 
@@ -110,11 +104,8 @@ public:
     bool requiresGrad() const { return impl->requiresGrad; }
     void setRequiresGrad(bool requiresGrad) { impl->requiresGrad = requiresGrad; }
     bool isLeaf() const { return impl->isLeaf; }
-    std::vector<int> shape() const { return impl->data.getShape(); }
+    Shape shape() const { return Shape(impl->data.getShape()); }
     int size() const { return impl->data.getSize(); }
-    Tensor<dtype> transpose(const std::vector<int> &perm={}) const {
-        return tensor::transpose(*this, perm);
-    };
     void zeroGrad() { impl->zeroGrad(); }
     void backward() {
         if (!impl->requiresGrad) {

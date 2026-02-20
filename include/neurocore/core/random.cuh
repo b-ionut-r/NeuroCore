@@ -79,7 +79,6 @@ namespace arr{
         out.executeElementWise(RandomUniformOp<dtype>{seed, lower, upper},
             nullptr, &out);
     }
-
     NDArray<int> randInt(const Shape &shape, int seed=NOTSET,
         int lower=0, int upper=1) {
         if (seed == NOTSET) seed = getManualSeed();

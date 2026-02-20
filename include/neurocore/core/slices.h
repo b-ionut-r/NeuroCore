@@ -16,12 +16,25 @@ class NDArray;
 template<typename dtype>
 class Tensor;
 
-struct Shape {
+struct ReshapeMapping {
+    std::vector<int> originalIdx;
+    std::vector<int> finalIdx;
+};
+
+class Shape {
+private:
     std::vector<int> dims;
+public:
     Shape() = default;
     explicit Shape(const std::initializer_list<int> &shape) : dims(shape) {}
     explicit Shape(const std::vector<int> &shapeVec) : dims(shapeVec) {}
+    const std::vector<int>& getDims() const {return dims;}
+    int getSize() const {return dims.size();}
+    int prod() const;
+    std::vector<ReshapeMapping> inferReshape(const Shape &newShape) const;
 };
+
+
 
 class Slice {
     int start = 0, stop = 0, step = 0;
@@ -37,7 +50,7 @@ public:
     int getStart() const {return start;}
     int getStop() const {return stop;}
     int getStep() const {return step;}
-    std::vector<int> getIndices() const {return indices;}
+    std::vector<int> getIndices() const;
     bool isFromIndices() const {return fromIndices;}
     // Iterator
     class Iterator {

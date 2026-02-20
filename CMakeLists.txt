@@ -31,6 +31,7 @@ add_executable(NeuroCore
         examples/demo_main.cu
         include/neurocore/core/elementwise_kernels.cuh
         include/neurocore/core/random.cuh
+        include/neurocore/functions/tensor_ops.cuh
 )
 
 

@@ -8,8 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <list>
-#include <memory>
+#include <algorithm>
 #include <cmath>
 #include "core/elementwise_kernels.cuh"
 #include "core/slices.h"
@@ -17,6 +16,8 @@
 #include "core/exceptions.h"
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
+#include <numeric>
+
 #include "cuda/std/type_traits"
 #include "core/type_traits.cuh"
 #include <variant>
@@ -54,8 +55,12 @@ public:
     NDArray(); // default constructor
     explicit NDArray(const Shape &shape); // alocator constructor
     void _computeStrides();
-    NDArray(dtype *data, const std::vector<int> &shape, const int &offset,
+    NDArray(dtype *data, const Shape &shape, const int &offset,
             const std::vector<int> &strides); // viewer constructor
+    NDArray(dtype *data, const std::vector<int> &shape, const int &offset,
+           const std::vector<int> &strides) {
+        NDArray(data, Shape(shape), offset, strides);
+    }
     NDArray(const NDArray<dtype> &other); // copy constructor
     explicit NDArray(const utils::NestedVec<dtype> &vec); // constructor from nested vector
     NDArray(NDArray<dtype> &&other) noexcept; /* move constructor
@@ -110,7 +115,12 @@ public:
 
     /// OTHERS
     NDArray transpose(std::vector<int> perm={}) const;
-    NDArray transposeInPlace(std::vector<int> perm={});
+    NDArray reshape(const Shape &newShape) const;
+    NDArray flatten(int start, int end=-1) const;
+    NDArray squeeze(std::vector<int> axes={}) const;
+    NDArray squeeze(int axis) const {return squeeze({axis});}
+    NDArray expandDims(std::vector<int> axes) const;
+    NDArray expandDims(int axis) const {return expandDims({axis});}
     std::vector<dtype> toVector() const;
     template <typename newDtype>
     NDArray<newDtype> cast() const;
@@ -143,9 +153,9 @@ NDArray<dtype>::NDArray():
 
 template<typename dtype>
 NDArray<dtype>::NDArray(const Shape &shape):
-    shape(shape.dims),
-    ndim(shape.dims.size()),
-    strides(shape.dims.size()),
+    shape(shape.getDims()),
+    ndim(shape.getSize()),
+    strides(shape.getSize()),
     itemBytes(sizeof(dtype)),
     offset(0),
     ownsData(true),
@@ -174,20 +184,20 @@ void NDArray<dtype>::_computeStrides() {
 }
 
 template<typename dtype>
-NDArray<dtype>::NDArray(dtype *data, const std::vector<int> &shape,
+NDArray<dtype>::NDArray(dtype *data, const Shape &shape,
     const int &offset, const std::vector<int> &strides):
     data(data),
-    shape(shape),
-    ndim(shape.size()),
+    shape(shape.getDims()),
+    ndim(shape.getSize()),
     strides(strides),
     itemBytes(sizeof(dtype)),
     offset(offset),
     ownsData(false),
     id(++idGenerator)
 {
-    size = shape[0];
+    size = this->shape[0];
     for (int i = 1; i < ndim; i++) {
-        size *= shape[i];
+        size *= this->shape[i];
     }
     N_BLOCKS = (size + N_THREADS - 1) / N_THREADS;
 };
@@ -209,7 +219,7 @@ NDArray<dtype>::NDArray(const NDArray<dtype> &other):
     if (other.isContiguous() && other.offset == 0) {
         cudaMemcpy(data, other.data, size * itemBytes, cudaMemcpyDeviceToDevice);
     } else {
-        NDArray<dtype> temp(data, shape, 0, strides); // temp view
+        NDArray<dtype> temp(data, Shape(shape), 0, strides); // temp view
         temp.executeElementWise(AssignOp<dtype>{}, &other, &temp);
         temp.ownsData = false;
     }
@@ -405,7 +415,7 @@ NDArray<dtype> NDArray<dtype>::executeElementWise(
             for (size_t i = 0; i < info.aBroadcastAxes.size(); i++) {
                 newStrides[info.aBroadcastAxes[i]] = 0;
             }
-            first = new NDArray<dtype>(this->data, info.finalShape, this->offset, newStrides);
+            first = new NDArray<dtype>(this->data, Shape(info.finalShape), this->offset, newStrides);
             delFirst = true;
         }
         if (info.bBroadcastAxes.empty()) second = other;
@@ -414,7 +424,7 @@ NDArray<dtype> NDArray<dtype>::executeElementWise(
             for (size_t i = 0; i < info.bBroadcastAxes.size(); i++) {
                 newStrides[info.bBroadcastAxes[i]] = 0;
             }
-            second = new NDArray<dtype>(other->data, info.finalShape, other->offset, newStrides);
+            second = new NDArray<dtype>(other->data, Shape(info.finalShape), other->offset, newStrides);
             delSecond = true;
         }
         result = final ? final : new NDArray<dtype>(Shape(info.finalShape));
@@ -696,30 +706,97 @@ NDArray<dtype> NDArray<dtype>::transpose(std::vector<int> perm) const {
     return NDArray<dtype>(data, newShape, offset, newStrides);
 }
 
-template<typename dtype>
-NDArray<dtype> NDArray<dtype>::transposeInPlace(std::vector<int> perm) {
-    if (perm.empty()) {
-        perm.resize(ndim);
-        for (int i = 0; i < ndim; i++) {
-            perm[i] = i;
+
+template <typename dtype>
+NDArray<dtype> NDArray<dtype>::reshape(const Shape &newShape) const {
+    const std::vector<ReshapeMapping> mapping = Shape(shape).inferReshape(newShape);
+    const std::vector<int> orig=shape, fin=newShape.getDims();
+    std::vector<int> finStrides(newShape.getSize());
+    for (auto& map: mapping) {
+        const std::vector<int> &origIdx = map.originalIdx, &finIdx = map.finalIdx;
+        // Expansion path
+        if (origIdx.size() == 1) {
+            finStrides[finIdx.back()] = strides[origIdx[0]];
+            for (int i = finIdx.size()-2; i>=0; i--) {
+                finStrides[finIdx[i]] = finStrides[finIdx[i+1]] * fin[finIdx[i+1]];
+            }
         }
-        if (ndim >= 2) {
-            std::swap(perm[ndim-2], perm[ndim-1]);
+        // Contraction path
+        else {
+            // Ensure contiguity
+            for (int i = 0; i < origIdx.size() - 1; i++) {
+                if (strides[origIdx[i]] != strides[origIdx[i+1]] * orig[origIdx[i+1]])
+                    throw ShapeMismatchException("Can't reshape. Non-contiguous axes cannot be collapsed"
+                                                 "without a copy.");
+            }
+            finStrides[finIdx[0]] = strides[origIdx.back()];
         }
     }
-    if (perm.size() != ndim) {
-        throw SizeMismatchException("Invalid permutation vector.");
-    }
-    std::vector<int> newShape(ndim);
-    std::vector<int> newStrides(ndim);
-    for (int i = 0; i < ndim; i++) {
-        newShape[perm[i]] = shape[i];
-        newStrides[perm[i]] = strides[i];
-    }
-    shape = newShape;
-    strides = newStrides;
-    return *this;
+    return NDArray<dtype>(data, newShape, offset, finStrides);
 }
+
+template <typename dtype>
+NDArray<dtype> NDArray<dtype>::flatten(int start, int end) const {
+    if (end < 0) end = ndim + end;
+    if (start < 0 || end < 0 || end > ndim - 1)
+        throw IndexingException("Axes out of bounds.");
+    std::vector<int> newShape;
+    newShape.reserve(ndim);
+    for (int i=0; i<start; i++)
+        newShape.push_back(shape[i]);
+    int prod=1;
+    for (int i=start; i<=end; i++)
+        prod *= shape[i];
+    newShape.push_back(prod);
+    for (int i=end+1; i<=ndim; i++)
+        newShape.push_back(shape[i]);
+    return reshape(Shape(newShape));
+}
+
+template<typename dtype>
+NDArray<dtype> NDArray<dtype>::squeeze(std::vector<int> axes) const {
+    for (auto axis: axes) {
+        if (axis < 0) axis += ndim;
+        if (axis < 0 || axis > ndim-1)
+            throw IndexingException("Axis out of bounds.");
+    }
+    if (axes.empty()) {
+        axes.resize(ndim);
+        std::iota(axes.begin(), axes.end(), 0);
+    }
+    std::vector<int> newShape;
+    newShape.reserve(ndim);
+    for (int i = 0; i<ndim; i++) {
+        bool axisSelected = std::find(axes.begin(), axes.end(), i) != axes.end();
+        if (axisSelected && shape[i] == 1)
+            continue;
+        newShape.push_back(shape[i]);
+    }
+    return reshape(Shape(newShape));
+}
+
+
+template<typename dtype>
+NDArray<dtype> NDArray<dtype>::expandDims(std::vector<int> axes) const {
+    for (auto& axis : axes) {
+        if (axis < 0) axis += ndim + 1;  // +1 because you can insert at the end
+        if (axis < 0 || axis > ndim)
+            throw IndexingException("Axis out of bounds.");
+    }
+    std::sort(axes.begin(), axes.end());
+    std::vector<int> newShape = shape;
+    for (int i = 0; i < axes.size(); ++i) {
+        newShape.insert(newShape.begin() + axes[i], 1);
+        // after each insert, shift remaining axes to the right
+        for (int j = i + 1; j < axes.size(); ++j) {
+            if (axes[j] >= axes[i])
+                axes[j]++;
+        }
+    }
+    return reshape(Shape(newShape));
+}
+
+
 
 template <typename dtype>
 std::vector<dtype> NDArray<dtype>::toVector() const {
@@ -856,19 +933,49 @@ namespace arr {
 
     /// Factories
     template <typename dtype>
-    NDArray<dtype> make_constant(const std::vector<int> &shape, const dtype &value) {
+    NDArray<dtype> makeConstant(const std::vector<int> &shape, const dtype &value) {
         NDArray<dtype> array(shape);
         array = static_cast<dtype>(value);
         return array;
     }
 
     template <typename dtype>
-    NDArray<dtype> make_zeros(const std::vector<int> &shape) {
-        return make_constant(shape, static_cast<dtype>(0));
+    NDArray<dtype> makeZeros(const std::vector<int> &shape) {
+        return makeConstant(shape, static_cast<dtype>(0));
     }
     template <typename dtype>
-    NDArray<dtype> make_ones(const std::vector<int> &shape) {
-        return make_constant(shape, static_cast<dtype>(1));
+    NDArray<dtype> makeOnes(const std::vector<int> &shape) {
+        return makeConstant(shape, static_cast<dtype>(1));
+    }
+
+    /// OTHERS
+    template <typename dtype>
+    NDArray<dtype> transpose(const NDArray<dtype> &a, std::vector<int> perm) {
+        return a.transpose(perm);
+    }
+    template <typename dtype>
+    NDArray<dtype> reshape(const NDArray<dtype> &a, const Shape &newShape) {
+        return a.reshape(newShape);
+    }
+    template <typename dtype>
+    NDArray<dtype> flatten(const NDArray<dtype> &a, int start, int end=-1) {
+        return a.flatten(start, end);
+    }
+    template <typename dtype>
+    NDArray<dtype> squeeze(const NDArray<dtype> &a, std::vector<int> axes={}) {
+        return a.squeeze(axes);
+    }
+    template <typename dtype>
+    NDArray<dtype> squeeze(const NDArray<dtype> &a, int axis) {
+        return a.squeeze({axis});
+    }
+    template <typename dtype>
+    NDArray<dtype> expandDims(const NDArray<dtype> &a, std::vector<int> axes) {
+        return a.expandDims(axes);
+    }
+    template <typename dtype>
+    NDArray<dtype> expandDims(const NDArray<dtype> &a, int axis) {
+        return a.expandDims({axis});
     }
 
     /// Elementary binaries
