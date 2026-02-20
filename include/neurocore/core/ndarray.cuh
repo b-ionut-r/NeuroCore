@@ -55,11 +55,11 @@ public:
     NDArray(); // default constructor
     explicit NDArray(const Shape &shape); // alocator constructor
     void _computeStrides();
-    NDArray(dtype *data, const Shape &shape, const int &offset,
-            const std::vector<int> &strides); // viewer constructor
     NDArray(dtype *data, const std::vector<int> &shape, const int &offset,
+            const std::vector<int> &strides); // viewer constructor
+    NDArray(dtype *data, const Shape &shape, const int &offset,
            const std::vector<int> &strides) {
-        NDArray(data, Shape(shape), offset, strides);
+        NDArray(data, shape.getDims(), offset, strides);
     }
     NDArray(const NDArray<dtype> &other); // copy constructor
     explicit NDArray(const utils::NestedVec<dtype> &vec); // constructor from nested vector
@@ -184,20 +184,20 @@ void NDArray<dtype>::_computeStrides() {
 }
 
 template<typename dtype>
-NDArray<dtype>::NDArray(dtype *data, const Shape &shape,
+NDArray<dtype>::NDArray(dtype *data, const std::vector<int> &shape,
     const int &offset, const std::vector<int> &strides):
     data(data),
-    shape(shape.getDims()),
-    ndim(shape.getSize()),
+    shape(shape.size()),
+    ndim(shape.size()),
     strides(strides),
     itemBytes(sizeof(dtype)),
     offset(offset),
     ownsData(false),
     id(++idGenerator)
 {
-    size = this->shape[0];
+    size = shape[0];
     for (int i = 1; i < ndim; i++) {
-        size *= this->shape[i];
+        size *= shape[i];
     }
     N_BLOCKS = (size + N_THREADS - 1) / N_THREADS;
 };
@@ -219,7 +219,7 @@ NDArray<dtype>::NDArray(const NDArray<dtype> &other):
     if (other.isContiguous() && other.offset == 0) {
         cudaMemcpy(data, other.data, size * itemBytes, cudaMemcpyDeviceToDevice);
     } else {
-        NDArray<dtype> temp(data, Shape(shape), 0, strides); // temp view
+        NDArray<dtype> temp(data, shape, 0, strides); // temp view
         temp.executeElementWise(AssignOp<dtype>{}, &other, &temp);
         temp.ownsData = false;
     }
@@ -415,7 +415,7 @@ NDArray<dtype> NDArray<dtype>::executeElementWise(
             for (size_t i = 0; i < info.aBroadcastAxes.size(); i++) {
                 newStrides[info.aBroadcastAxes[i]] = 0;
             }
-            first = new NDArray<dtype>(this->data, Shape(info.finalShape), this->offset, newStrides);
+            first = new NDArray<dtype>(this->data, info.finalShape, this->offset, newStrides);
             delFirst = true;
         }
         if (info.bBroadcastAxes.empty()) second = other;
@@ -424,7 +424,7 @@ NDArray<dtype> NDArray<dtype>::executeElementWise(
             for (size_t i = 0; i < info.bBroadcastAxes.size(); i++) {
                 newStrides[info.bBroadcastAxes[i]] = 0;
             }
-            second = new NDArray<dtype>(other->data, Shape(info.finalShape), other->offset, newStrides);
+            second = new NDArray<dtype>(other->data, info.finalShape, other->offset, newStrides);
             delSecond = true;
         }
         result = final ? final : new NDArray<dtype>(Shape(info.finalShape));
