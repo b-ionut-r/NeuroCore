@@ -102,14 +102,22 @@ public:
     NDArray& operator=(const NDArray &other);
     NDArray& operator=(const utils::NestedVec<dtype> &vec);
     NDArray operator+(const NDArray &other) const;
+    NDArray& operator+=(const NDArray &other);
     NDArray operator+(const dtype &value) const;
+    NDArray& operator+=(const dtype &value);
     NDArray operator-() const;
     NDArray operator-(const NDArray &other) const;
+    NDArray& operator-=(const NDArray &other);
     NDArray operator-(const dtype &value) const;
+    NDArray& operator-=(const dtype &value);
     NDArray operator*(const NDArray &other) const;
+    NDArray& operator*=(const NDArray &other);
     NDArray operator*(const dtype &value) const;
+    NDArray& operator*=(const dtype &value);
     NDArray operator/(const NDArray &other) const;
+    NDArray& operator/=(const NDArray &other);
     NDArray operator/(const dtype &value) const;
+    NDArray& operator/=(const dtype &value);
     friend std::ostream& operator<< <>(std::ostream &os, const NDArray<dtype> &arr);
     friend std::istream& operator>> <>(std::istream &is, NDArray<dtype> &arr);
 
@@ -503,6 +511,8 @@ NDArray<dtype>& NDArray<dtype>::operator=(const dtype &value) {
 
 template <typename dtype>
 NDArray<dtype>& NDArray<dtype>::operator=(const NDArray<dtype> &other) {
+    if (this == &other)
+        return *this;
     if (shape != other.shape)
         throw ShapeMismatchException("Cannot assign arrays of different shapes.");
     if (isContiguous() && other.isContiguous() && offset == 0 && other.offset == 0) {
@@ -530,10 +540,20 @@ template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator+(const NDArray<dtype> &other) const {
     return executeElementWise(AffineAddOp<dtype>{1, 1}, &other, nullptr);
 }
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator+=(const NDArray<dtype> &other) {
+    executeElementWise(AffineAddOp<dtype>{1, 1}, &other, this);
+    return *this;
+}
 
 template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator+(const dtype &value) const {
     return executeElementWise(ScalarAddOp<dtype>{value}, nullptr, nullptr);
+}
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator+=(const dtype &value) {
+    executeElementWise(ScalarAddOp<dtype>{value}, nullptr, this);
+    return *this;
 }
 
 template <typename dtype>
@@ -543,18 +563,27 @@ NDArray<dtype> operator+(dtype value, const NDArray<dtype> &arr) {
 
 template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator-() const {
-    return executeElementWise(ScalarMulOp<dtype>{static_cast<dtype>(-1)}, nullptr, nullptr);
+    return executeElementWise(ScalarMulOp<dtype>{-1}, nullptr, nullptr);
 }
 
 template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator-(const NDArray<dtype> &other) const {
-    return executeElementWise(AffineAddOp<dtype>{static_cast<dtype>(1), static_cast<dtype>(-1)},
-                              &other, nullptr);
+    return executeElementWise(AffineAddOp<dtype>{1, -1}, &other, nullptr);
+}
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator-=(const NDArray<dtype> &other) {
+    executeElementWise(AffineAddOp<dtype>{1, -1}, &other, this);
+    return *this;
 }
 
 template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator-(const dtype &value) const {
     return executeElementWise(ScalarAddOp<dtype>{-value}, nullptr, nullptr);
+}
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator-=(const dtype &value) {
+    executeElementWise(ScalarAddOp<dtype>{-value}, nullptr, this);
+    return *this;
 }
 
 template <typename dtype>
@@ -566,10 +595,20 @@ template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator*(const NDArray<dtype> &other) const {
     return executeElementWise(MulOp<dtype>{}, &other, nullptr);
 }
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator*=(const NDArray<dtype> &other) {
+    executeElementWise(MulOp<dtype>{}, &other, this);
+    return *this;
+}
 
 template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator*(const dtype &value) const {
     return executeElementWise(ScalarMulOp<dtype>{value}, nullptr, nullptr);
+}
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator*=(const dtype &value) {
+    executeElementWise(ScalarMulOp<dtype>{value}, nullptr, this);
+    return *this;
 }
 
 template <typename dtype>
@@ -581,10 +620,20 @@ template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator/(const NDArray<dtype> &other) const {
     return executeElementWise(DivOp<dtype>{}, &other, nullptr);
 }
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator/=(const NDArray<dtype> &other) {
+    executeElementWise(DivOp<dtype>{}, &other, this);
+    return *this;
+}
 
 template <typename dtype>
 NDArray<dtype> NDArray<dtype>::operator/(const dtype &value) const {
     return executeElementWise(ScalarMulOp<dtype>{1/value}, nullptr, nullptr);
+}
+template <typename dtype>
+NDArray<dtype>& NDArray<dtype>::operator/=(const dtype &value) {
+    executeElementWise(ScalarMulOp<dtype>{1/value}, nullptr, this);
+    return *this;
 }
 
 template <typename dtype>
